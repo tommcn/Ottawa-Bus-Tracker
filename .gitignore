@@ -44,7 +44,7 @@ app.*.symbols
 app.*.map.json
 
 # Huge .db files
-.db
+*.db
 
 # Exceptions to above rules.
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
