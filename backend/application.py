@@ -65,11 +65,11 @@ def stops():
     if not req_data:
         select = SQL_EXECUTE("SELECT * FROM stops ")
     elif 'route_id' in req_data and 'stop_id' in req_data:
-        select = SQL_EXECUTE("SELECT * FROM joined WHERE route_id = :route_id AND stop_id = :stop_id", route_id = req_data["route_id"], stop_id = req_data["stop_id"])
+        select = SQL_EXECUTE("SELECT DISTINCT stop_id, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type FROM joined WHERE route_id = :route_id", route_id = req_data["route_id"])
     elif 'route_id' in req_data:
-        select = SQL_EXECUTE("SELECT * FROM joined WHERE route_id = :route_id", route_id = req_data["route_id"])
+        select = SQL_EXECUTE("SELECT DISTINCT stop_id, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type FROM joined WHERE route_id = :route_id", route_id = req_data["route_id"])
     elif 'stop_id' in req_data:
-        select = SQL_EXECUTE("SELECT * FROM joined WHERE stop_id = :stop_id", stop_id = req_data["stop_id"])
+        select = SQL_EXECUTE("SELECT DISTINCT stop_id, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type FROM joined WHERE stop_id = :stop_id", stop_id = req_data["stop_id"])
     return jsonify(select), 200
 
 @app.route("/time")
@@ -78,7 +78,7 @@ def time():
     or in the case of getting a route id, return all of the stops for that route"""
     req_data = request.get_json()
     if not req_data:
-        select = SQL_EXECUTE("SELECT arrival_time FROM stop_times")
+        select = SQL_EXECUTE("SELECT route_id, route_short_name, route_type, trip_id, trip_headsign, stop_name, arrival_time, stop_sequence, direction_id FROM stop_times")
     elif 'stop_id' in req_data:
         select = SQL_EXECUTE("SELECT route_id, route_short_name, route_type, trip_id, trip_headsign, stop_name, arrival_time, stop_sequence, direction_id FROM joined WHERE stop_id = :stop_id", stop_id = req_data["stop_id"])
     return jsonify(select), 200
