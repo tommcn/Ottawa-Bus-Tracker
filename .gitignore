@@ -49,3 +49,5 @@ app.*.map.json
 # Exceptions to above rules.
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 backend/google_transit_oc_ottawa.db
+*.csv
+backend/google_transit_oc_ottawa.db
