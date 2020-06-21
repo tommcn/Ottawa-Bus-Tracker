@@ -8,7 +8,7 @@ import flask_sqlalchemy
 import time
 
 # THIS IS THE QUERY TO USE TO JOIN ALL THE TABLES FOR THE DATABASE FOR EFFICEIENCY
-# SELECT routes.route_id, route_short_name, route_long_name, route_desc, route_type, route_url, route_text_color, trips.trip_id, arrival_time, departure_time, stops.stop_id, stop_sequence, pickup_type, drop_off_type, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type, service_id, trip_headsign, direction_id, block_id FROM stops JOIN stop_times ON stops.stop_id = stop_times.stop_id JOIN trips ON trips.trip_id = stop_times.trip_id JOIN routes ON trips.route_id = routes.route_id
+# SELECT routes.route_id, route_short_name, route_long_name, route_desc, route_type, route_url, route_text_color, trips.trip_id, arrival_time, departure_time, stops.stop_id, stop_sequence, pickup_type, drop_off_type, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type, service_id, trip_headsign, direction_id, block_id, stop_id FROM stops JOIN stop_times ON stops.stop_id = stop_times.stop_id JOIN trips ON trips.trip_id = stop_times.trip_id JOIN routes ON trips.route_id = routes.route_id
 # Configure application
 app = Flask(__name__)
 
@@ -91,8 +91,8 @@ def shapesQuery():
         select = SQL_EXECUTE("SELECT * FROM shapes")
     elif 'trip_id' in req_data:
         if 'get_shape_id' in req_data:
-            if req_data['get_shape_id'] == 1:
-                select = SQL_EXECUTE("SELECT shape_id FROM joined WHERE trip_id = :trip_id", trip_id = req_data["trip_id"])
+            if req_data['get_shape_id'] == "1":
+                select = SQL_EXECUTE("SELECT DISTINCT shape_id FROM joined WHERE trip_id = :trip_id", trip_id = req_data["trip_id"])
         else:
             select = SQL_EXECUTE("SELECT * FROM trip_shapes_joined WHERE trip_id = :trip_id", trip_id = req_data["trip_id"])
     return jsonify(select), 200
