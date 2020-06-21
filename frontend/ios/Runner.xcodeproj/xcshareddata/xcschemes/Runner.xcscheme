@@ -66,16 +66,11 @@
          </CommandLineArgument>
       </CommandLineArguments>
       <EnvironmentVariables>
-         <EnvironmentVariable
-            key = "GOOGLE_MAPS_API_KEY"
-            value = "AIzaSyBrwU0UKkmOU0l-PJQ7c25V0Hccv65HmoQ"
-            isEnabled = "YES">
-         </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Profile"
-      shouldUseLaunchSchemeArgsEnv = "YES"
+      shouldUseLaunchSchemeArgsEnv = "NO"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">

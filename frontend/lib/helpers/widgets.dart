@@ -274,7 +274,7 @@ class RSSDetail extends StatelessWidget {
 }
 
 Future getRoutes() async {
-  var response = await http.get("http://127.0.0.1:5000/stops");
+  var response = await http.get("${globals.backend}/stops");
   return response;
 }
 
@@ -337,59 +337,6 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-/*
-class StopList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: getRoutes(),
-      builder: (context, result) {
-        if (result.connectionState == ConnectionState.done) {
-          var data = json.decode(result.data.body.toString());
-          return ListView.separated(
-            separatorBuilder: (context, index) => Divider(
-              color: Colors.black,
-              height: 0,
-              thickness: 0.5,
-            ),
-            itemCount: data.length,
-            itemBuilder: (context, index) {
-              var filter = "sussex";
-              return filter == null || filter == ""
-                  ? new ListTile(
-                      leading: Icon(Icons.transfer_within_a_station),
-                      title: Text(data[index]["stop_name"]),
-                      subtitle: Text(data[index]["stop_code"].toString()),
-                      onTap: () {})
-                  : data[index]["stop_name"]
-                          .toLowerCase()
-                          .contains(filter.toLowerCase())
-                      ? ListTile(
-                          leading: Icon(Icons.transfer_within_a_station),
-                          title: Text(data[index]["stop_name"]),
-                          subtitle: Text(data[index]["stop_code"].toString()),
-                          onTap: () {})
-                      : new Container();
-
-              /*ListTile(
-                  leading: Icon(Icons.transfer_within_a_station),
-                  title: Text(data[index]["stop_name"]),
-                  subtitle: Text(data[index]["stop_code"].toString()),
-                  onTap: () {
-                  },
-                );  */
-            },
-          );
-        } else {
-          return LinearProgressIndicator(
-            value: null,
-          );
-        }
-      },
-    );
-  }
-}
-*/
 class Map extends StatefulWidget {
   @override
   _MapState createState() => _MapState();
@@ -397,8 +344,6 @@ class Map extends StatefulWidget {
 
 class _MapState extends State<Map> {
   GoogleMapController mapController;
-
-  final LatLng _center = const LatLng(45.521563, -122.677433);
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -422,12 +367,12 @@ class _MapState extends State<Map> {
                 onMapCreated: _onMapCreated,
                 initialCameraPosition: CameraPosition(
                   target: pos,
-                  zoom: 14.0,
+                  zoom: 15.0,
                 ),
                 markers: _markers,
               );
             } else {
-              return Text("Failed");
+              return Text("It seems that you have not allowed use to use your position");
             }
           } else {
             return CircularProgressIndicator();
