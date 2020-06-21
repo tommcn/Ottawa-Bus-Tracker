@@ -58,7 +58,7 @@ def index():
     return HTTPException, 404
 
 @app.route("/stops")
-def stops():
+def stopsQuery():
     """RETURN all of the stops
     or in the case of getting a route id, return all of the stops for that route"""
     req_data = request.get_json()
@@ -73,7 +73,7 @@ def stops():
     return jsonify(select), 200
 
 @app.route("/time")
-def time():
+def timeQuery():
     """RETURN all of the times
     or in the case of getting a route id, return all of the stops for that route"""
     req_data = request.get_json()
@@ -81,6 +81,20 @@ def time():
         select = SQL_EXECUTE("SELECT route_id, route_short_name, route_type, trip_id, trip_headsign, stop_name, arrival_time, stop_sequence, direction_id FROM stop_times")
     elif 'stop_id' in req_data:
         select = SQL_EXECUTE("SELECT route_id, route_short_name, route_type, trip_id, trip_headsign, stop_name, arrival_time, stop_sequence, direction_id FROM joined WHERE stop_id = :stop_id", stop_id = req_data["stop_id"])
+    return jsonify(select), 200
+
+@app.route("/shapes")
+def shapesQuery():
+    """RETURN all the shapes"""
+    req_data = request.get_json()
+    if not req_data:
+        select = SQL_EXECUTE("SELECT * FROM shapes")
+    elif 'trip_id' in req_data:
+        if 'get_shape_id' in req_data:
+            if req_data['get_shape_id'] == 1:
+                select = SQL_EXECUTE("SELECT shape_id FROM joined WHERE trip_id = :trip_id", trip_id = req_data["trip_id"])
+        else:
+            select = SQL_EXECUTE("SELECT * FROM trip_shapes_joined WHERE trip_id = :trip_id", trip_id = req_data["trip_id"])
     return jsonify(select), 200
 
 def errorhandler(e):
