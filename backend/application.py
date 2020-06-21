@@ -110,6 +110,6 @@ for code in default_exceptions:
 
 # Close the database when we are done with it
 try:
-    app.run()
+    app.run(host="0.0.0.0")
 except:
     con.close()
