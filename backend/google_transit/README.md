@@ -1,0 +1,2 @@
+## Google Transit
+This is the GTFS data about OC Transpo's service. This dataset is freely available  [here](http://www.octranspo.com/plan-your-trip/travel-tools/developers). Documentation about the GTFS standard can be found [here](https://developers.google.com/transit/gtfs/reference). To actually use this data, you need to load it into an SQL database.
