@@ -6,6 +6,7 @@ from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
 import flask_sqlalchemy
 import time
+import direction
 
 # THIS IS THE QUERY TO USE TO JOIN ALL THE TABLES FOR THE DATABASE FOR EFFICEIENCY
 # SELECT routes.route_id, route_short_name, route_long_name, route_desc, route_type, route_url, route_text_color, trips.trip_id, arrival_time, departure_time, stops.stop_id, stop_sequence, pickup_type, drop_off_type, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type, service_id, trip_headsign, direction_id, block_id, stop_id FROM stops JOIN stop_times ON stops.stop_id = stop_times.stop_id JOIN trips ON trips.trip_id = stop_times.trip_id JOIN routes ON trips.route_id = routes.route_id
@@ -70,6 +71,8 @@ def stopsQuery():
         select = SQL_EXECUTE("SELECT DISTINCT stop_id, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type FROM joined WHERE route_id = :route_id", route_id = req_data["route_id"])
     elif 'stop_id' in req_data:
         select = SQL_EXECUTE("SELECT DISTINCT stop_id, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type FROM joined WHERE stop_id = :stop_id", stop_id = req_data["stop_id"])
+    elif 'distance' in req_data:
+        select = SQL_EXECUTE("SELECT * FROM stops WHERE  stop_lon < :lon_in + :distance AND stop_lon > :lon_in - :distance AND stop_lat < :lat_in + :distance AND stop_lat > :lat_in - :distance ", distance = req_data['distance'], lon_in = req_data["lon"], lat_in = req_data["lat"])
     return jsonify(select), 200
 
 @app.route("/time")
@@ -97,6 +100,21 @@ def shapesQuery():
             select = SQL_EXECUTE("SELECT * FROM trip_shapes_joined WHERE trip_id = :trip_id", trip_id = req_data["trip_id"])
     return jsonify(select), 200
 
+@app.route("/direction")
+def directionQuery():
+    """RETURN the direction from a start location to an end location using the google
+    direction API"""
+    req_data = request.get_json()
+    if not req_data:
+        return "Lacking any data", 404
+    elif 'start_lat' not in req_data or 'start_lon' not in req_data:
+        return "Lacking start data", 404
+    elif 'end_lat' not in req_data or 'end_lon' not in req_data:
+        return "Lacking end data", 404
+    else:
+        toReturn = direction.transit(str(req_data['start_lat'])+ ',' + str(req_data['start_lon']), str(req_data['end_lat'])+ ',' + str(req_data['end_lon']))
+    return jsonify(toReturn), 200
+
 def errorhandler(e):
     """Handle error"""
     if not isinstance(e, HTTPException):
@@ -109,7 +127,4 @@ for code in default_exceptions:
     app.errorhandler(code)(errorhandler)
 
 # Close the database when we are done with it
-try:
-    app.run(host="0.0.0.0")
-except:
-    con.close()
+app.run(host="0.0.0.0")
