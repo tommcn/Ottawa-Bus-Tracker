@@ -38,7 +38,6 @@ def DICT_FACTORY(cursor, row):
         d[col[0]] = row[index]
     return d
 
-
 # A function to execute SQL
 def SQL_EXECUTE(statement, **params):
     con = sqlite3.connect(dbFile)
@@ -62,7 +61,7 @@ def index():
 def stopsQuery():
     """RETURN all of the stops
     or in the case of getting a route id, return all of the stops for that route"""
-    req_data = request.get_json()
+    req_data = dict(request.args)
     if not req_data:
         select = SQL_EXECUTE("SELECT * FROM stops ")
     elif 'route_id' in req_data and 'stop_id' in req_data:
@@ -79,9 +78,9 @@ def stopsQuery():
 def timeQuery():
     """RETURN all of the times
     or in the case of getting a route id, return all of the stops for that route"""
-    req_data = request.get_json()
+    req_data = dict(request.args)
     if not req_data:
-        select = SQL_EXECUTE("SELECT route_id, route_short_name, route_type, trip_id, trip_headsign, stop_name, arrival_time, stop_sequence, direction_id FROM stop_times")
+        select = SQL_EXECUTE("SELECT route_id, route_short_name, route_type, trip_id, trip_headsign, stop_name, arrival_time, stop_sequence, direction_id FROM joined")
     elif 'stop_id' in req_data:
         select = SQL_EXECUTE("SELECT route_id, route_short_name, route_type, trip_id, trip_headsign, stop_name, arrival_time, stop_sequence, direction_id FROM joined WHERE stop_id = :stop_id", stop_id = req_data["stop_id"])
     return jsonify(select), 200
@@ -89,7 +88,7 @@ def timeQuery():
 @app.route("/shapes")
 def shapesQuery():
     """RETURN all the shapes"""
-    req_data = request.get_json()
+    req_data = dict(request.args)
     if not req_data:
         select = SQL_EXECUTE("SELECT * FROM shapes")
     elif 'trip_id' in req_data:
@@ -104,7 +103,7 @@ def shapesQuery():
 def directionQuery():
     """RETURN the direction from a start location to an end location using the google
     direction API"""
-    req_data = request.get_json()
+    req_data = dict(request.args)
     if not req_data:
         return "Lacking any data", 404
     elif 'start_lat' not in req_data or 'start_lon' not in req_data:
@@ -113,6 +112,86 @@ def directionQuery():
         return "Lacking end data", 404
     else:
         toReturn = direction.transit(str(req_data['start_lat'])+ ',' + str(req_data['start_lon']), str(req_data['end_lat'])+ ',' + str(req_data['end_lon']))
+    return jsonify(toReturn), 200
+
+@app.route("/adduser")
+def addUser():
+    # ADD a user to the database
+    req_data = dict(request.args)
+    if not req_data:
+        return "Lacking any data", 404
+    # Check if there is a valid key in the data
+    elif 'key' not in req_data:
+        return "Lacking key", 403
+    elif int(SQL_EXECUTE("COUNT key FROM keys WHERE key = :key", key = req_data['key'])) < 1:
+        return "Incorrect key", 403
+    # Next look for user in the data
+    elif 'user_id' not in req_data:
+        return "No user_id", 404
+    else:
+        SQL_EXECUTE("INSERT INTO users(user_id) VALUES(:user_id)", user_id = req_data['user_id'])
+    return "User added", 200
+
+
+@app.route("/addfavorite")
+def addFavorite():
+    # ADD a user's favorite to the database
+    req_data = dict(request.args)
+    if not req_data:
+        return "Lacking any data", 404
+    # Check if there is a valid key in the data
+    elif 'key' not in req_data:
+        return "Lacking key", 403
+    elif int(SQL_EXECUTE("COUNT key FROM keys WHERE key = :key", key = req_data['key'])) < 1:
+        return "Incorrect key", 403
+    # Next look for user in the database
+    elif 'user_id' not in req_data:
+        return "No user_id", 404
+    elif int(SQL_EXECUTE("COUNT user_id FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])) < 1:
+        return "No user_id", 404
+    elif 'type' not in req_data:
+        return "No type", 404
+    elif 'id' not in req_data:
+        return "No id", 404
+    else:
+        # If we are looking to add to favorite stops
+        if req_data['type'] == "0":
+            SQL_EXECUTE("INSERT INTO favorite_stops(user_id, stop_id) VALUES(:user_id, :stop_id)", user_id = req_data['user_id'], stop_id = req_data['id'])
+         # If we are looking to add to favorite routes
+        elif req_data['type'] == "1":
+            SQL_EXECUTE("INSERT INTO favorite_routes(user_id, route_id) VALUES(:user_id, :route_id)", user_id = req_data['user_id'], route_id = req_data['id'])
+        else:
+            return "Invalid type", 404
+    return "Added " + req_data['favorite'] + "to " + req_data['user_id'] + "'s database.", 200
+
+
+@app.route("/favorites")
+def favoritesQuery():
+    # RETURN the user's favorite routes or stops
+    req_data = dict(request.args)
+    if not req_data:
+        return "Lacking any data", 404
+    # Check if there is a valid key in the data
+    elif 'key' not in req_data:
+        return "Lacking key", 403
+    elif int(SQL_EXECUTE("COUNT key FROM keys WHERE key = :key", key = req_data['key'])) < 1:
+        return "Incorrect key", 403
+    # Next 2 ifs are to authenticate the user
+    elif 'user_id' not in req_data:
+        return "No user", 404
+    elif int(SQL_EXECUTE("COUNT user_id FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])) < 1:
+        return "No user_id", 404
+    elif 'type' not in req_data:
+        return "No favorite type given", 404
+    else:
+        # If we are looking for favorite stops
+        if req_data['type'] == "0":
+            toReturn = SQL_EXECUTE("SELECT stops_id FROM favorite_stops WHERE user_id = :user_id", user_id = req_data['user_id'])
+        # If we are looking for a favorite route
+        elif req_data['type'] == "1":
+            toReturn = SQL_EXECUTE("SELECT route_id FROM favorite_routes WHERE user_id = :user_id", user_id = req_data['user_id'])
+        else:
+            return "Invalid type", 404
     return jsonify(toReturn), 200
 
 def errorhandler(e):
