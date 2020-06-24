@@ -158,7 +158,7 @@ def addUser():
         return "No user_id", 404
     elif req_data['user_id'] == '':
         return "No user_id", 404
-    elif int(SQL_EXECUTE("SELECT COUNT (user) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])[0]['COUNT (user_id)']) < 1:
+    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])[0]['COUNT (user_id)']) < 1:
         return "There is allready a user with the same UUID.", 403
     else:
         SQL_EXECUTE("INSERT INTO users(user_id) VALUES(:user_id)", user_id = req_data['user_id'])
