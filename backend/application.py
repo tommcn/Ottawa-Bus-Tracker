@@ -198,31 +198,24 @@ def favoritesQuery():
 
 @app.route("/searchStop")
 def searchStop():
-    # RETURN the user's favorite routes or stops
+    # RETURN a list of all stops that contain the query
     req_data = dict(request.args)
     if not req_data:
         return "Lacking any data", 404
-    # Check if there is a valid key in the data
-    elif 'key' not in req_data:
-        return "Lacking key", 403
-    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key'])) < 1:
-        return "Incorrect key", 403
-    # Next 2 ifs are to authenticate the user
-    elif 'user_id' not in req_data:
-        return "No user", 404
-    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])) < 1:
-        return "No user_id", 404
-    elif 'type' not in req_data:
-        return "No favorite type given", 404
+    # Check if there is a query in the data
+    elif 'query' not in req_data:
+        return "Lacking query", 404
+    elif 'order' not in req_data:
+        toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%'", query = req_data['query'])
     else:
-        # If we are looking for favorite stops
-        if req_data['type'] == "0":
-            toReturn = SQL_EXECUTE("SELECT stops_id FROM favorite_stops WHERE user_id = :user_id", user_id = req_data['user_id'])
+        # If we want to order in a cerain way
+        if req_data['order'] == "1":
+            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%' ORDER BY stop_name ASC", query = req_data['query'])
         # If we are looking for a favorite route
-        elif req_data['type'] == "1":
-            toReturn = SQL_EXECUTE("SELECT route_id FROM favorite_routes WHERE user_id = :user_id", user_id = req_data['user_id'])
+        elif req_data['order'] == "2":
+            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%' ORDER BY stop_name DESC'", query = req_data['query'])
         else:
-            return "Invalid type", 404
+            return "Invalid order", 404
     return jsonify(toReturn), 200
 
 def errorhandler(e):
