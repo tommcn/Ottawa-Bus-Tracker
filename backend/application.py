@@ -124,15 +124,18 @@ def searchStop():
     # Check if there is a query in the data
     elif 'query' not in req_data:
         return "Lacking query", 404
+    elif req_data['query'] == '':
+        return "No query", 404
     elif 'order' not in req_data:
-        toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%'", query = req_data['query'])
+        toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%':query'%'", query = req_data['query'])
+        print(req_data['query'])
     else:
         # If we want to order in a cerain way
         if req_data['order'] == "1":
-            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%' ORDER BY stop_name ASC", query = req_data['query'])
+            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE %:query% ORDER BY stop_name ASC", query = req_data['query'])
         # If we are looking for a favorite route
         elif req_data['order'] == "2":
-            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%' ORDER BY stop_name DESC'", query = req_data['query'])
+            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE %:query% ORDER BY stop_name DESC'", query = req_data['query'])
         else:
             return "Invalid order", 404
     return jsonify(toReturn), 200
@@ -146,12 +149,16 @@ def addUser():
     # Check if there is a valid key in the data
     elif 'key' not in req_data:
         return "Lacking key", 403
-    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key']))[0] < 1:
+    elif req_data['key'] == '':
+        return "No key", 404
+    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key'])[0]['COUNT (key)']) < 1:
         return "Incorrect key", 403
     # Next look for user in the data
     elif 'user_id' not in req_data:
         return "No user_id", 404
-    elif int(SQL_EXECUTE("SELECT COUNT (user) FROM users WHERE user_id = :user_id", user_id = req_data['user_id']))[0] < 1:
+    elif req_data['user_id'] == '':
+        return "No user_id", 404
+    elif int(SQL_EXECUTE("SELECT COUNT (user) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])[0]['COUNT (user_id)']) < 1:
         return "There is allready a user with the same UUID.", 403
     else:
         SQL_EXECUTE("INSERT INTO users(user_id) VALUES(:user_id)", user_id = req_data['user_id'])
@@ -167,16 +174,24 @@ def addFavorite():
     # Check if there is a valid key in the data
     elif 'key' not in req_data:
         return "Lacking key", 403
-    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key']))[0] < 1:
+    elif req_data['key'] == '':
+        return "No key", 404
+    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key'])[0]['COUNT (key)']) < 1:
         return "Incorrect key", 403
     # Next look for user in the database
     elif 'user_id' not in req_data:
         return "No user_id", 404
-    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id']))[0] < 1:
+    elif req_data['user_id'] == '':
+        return "No user_id", 404
+    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])[0]['COUNT (user_id)']) < 1:
         return "No user_id", 404
     elif 'type' not in req_data:
         return "No type", 404
+    elif req_data['type'] == '':
+        return "No type", 404
     elif 'id' not in req_data:
+        return "No id", 404
+    elif req_data['id'] == '':
         return "No id", 404
     else:
         # If we are looking to add to favorite stops
@@ -199,12 +214,16 @@ def favoritesQuery():
     # Check if there is a valid key in the data
     elif 'key' not in req_data:
         return "Lacking key", 403
-    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key']))[0] < 1:
+    elif req_data['key'] == '':
+        return "No key", 404
+    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key'])[0]['COUNT (key)']) < 1:
         return "Incorrect key", 403
     # Next 2 ifs are to authenticate the user
     elif 'user_id' not in req_data:
-        return "No user", 404
-    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id']))[0] < 1:
+        return "No user_id", 404
+    elif req_data['user_id'] == '':
+        return "No user_id", 404
+    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])[0]['COUNT (user_id)']) < 1:
         return "No user_id", 404
     elif 'type' not in req_data:
         return "No favorite type given", 404
