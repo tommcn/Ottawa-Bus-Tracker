@@ -114,6 +114,28 @@ def directionQuery():
         toReturn = direction.transit(str(req_data['start_lat'])+ ',' + str(req_data['start_lon']), str(req_data['end_lat'])+ ',' + str(req_data['end_lon']))
     return jsonify(toReturn), 200
 
+@app.route("/searchStop")
+def searchStop():
+    # RETURN a list of all stops that contain the query
+    req_data = dict(request.args)
+    if not req_data:
+        return "Lacking any data", 404
+    # Check if there is a query in the data
+    elif 'query' not in req_data:
+        return "Lacking query", 404
+    elif 'order' not in req_data:
+        toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%'", query = req_data['query'])
+    else:
+        # If we want to order in a cerain way
+        if req_data['order'] == "1":
+            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%' ORDER BY stop_name ASC", query = req_data['query'])
+        # If we are looking for a favorite route
+        elif req_data['order'] == "2":
+            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%' ORDER BY stop_name DESC'", query = req_data['query'])
+        else:
+            return "Invalid order", 404
+    return jsonify(toReturn), 200
+
 @app.route("/adduser")
 def addUser():
     # ADD a user to the database
@@ -194,28 +216,6 @@ def favoritesQuery():
             toReturn = SQL_EXECUTE("SELECT route_id FROM favorite_routes WHERE user_id = :user_id", user_id = req_data['user_id'])
         else:
             return "Invalid type", 404
-    return jsonify(toReturn), 200
-
-@app.route("/searchStop")
-def searchStop():
-    # RETURN a list of all stops that contain the query
-    req_data = dict(request.args)
-    if not req_data:
-        return "Lacking any data", 404
-    # Check if there is a query in the data
-    elif 'query' not in req_data:
-        return "Lacking query", 404
-    elif 'order' not in req_data:
-        toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%'", query = req_data['query'])
-    else:
-        # If we want to order in a cerain way
-        if req_data['order'] == "1":
-            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%' ORDER BY stop_name ASC", query = req_data['query'])
-        # If we are looking for a favorite route
-        elif req_data['order'] == "2":
-            toReturn = SQL_EXECUTE("SELECT * FROM stops WHERE stop_name LIKE '%:query%' ORDER BY stop_name DESC'", query = req_data['query'])
-        else:
-            return "Invalid order", 404
     return jsonify(toReturn), 200
 
 def errorhandler(e):
