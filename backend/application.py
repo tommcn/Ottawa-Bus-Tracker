@@ -6,7 +6,7 @@ from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
 import flask_sqlalchemy
 import time
-import direction
+# import direction
 
 # THIS IS THE QUERY TO USE TO JOIN ALL THE TABLES FOR THE DATABASE FOR EFFICEIENCY
 # SELECT routes.route_id, route_short_name, route_long_name, route_desc, route_type, route_url, route_text_color, trips.trip_id, arrival_time, departure_time, stops.stop_id, stop_sequence, pickup_type, drop_off_type, stop_code, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, location_type, service_id, trip_headsign, direction_id, block_id, stop_id FROM stops JOIN stop_times ON stops.stop_id = stop_times.stop_id JOIN trips ON trips.trip_id = stop_times.trip_id JOIN routes ON trips.route_id = routes.route_id
@@ -99,20 +99,21 @@ def shapesQuery():
             select = SQL_EXECUTE("SELECT * FROM trip_shapes_joined WHERE trip_id = :trip_id", trip_id = req_data["trip_id"])
     return jsonify(select), 200
 
-@app.route("/direction")
-def directionQuery():
-    """RETURN the direction from a start location to an end location using the google
-    direction API"""
-    req_data = dict(request.args)
-    if not req_data:
-        return "Lacking any data", 404
-    elif 'start_lat' not in req_data or 'start_lon' not in req_data:
-        return "Lacking start data", 404
-    elif 'end_lat' not in req_data or 'end_lon' not in req_data:
-        return "Lacking end data", 404
-    else:
-        toReturn = direction.transit(str(req_data['start_lat'])+ ',' + str(req_data['start_lon']), str(req_data['end_lat'])+ ',' + str(req_data['end_lon']))
-    return jsonify(toReturn), 200
+# Commented out beacuse we are not using this rn
+# @app.route("/direction")
+# def directionQuery():
+#     """RETURN the direction from a start location to an end location using the google
+#     direction API"""
+#     req_data = dict(request.args)
+#     if not req_data:
+#         return "Lacking any data", 404
+#     elif 'start_lat' not in req_data or 'start_lon' not in req_data:
+#         return "Lacking start data", 404
+#     elif 'end_lat' not in req_data or 'end_lon' not in req_data:
+#         return "Lacking end data", 404
+#     else:
+#         toReturn = direction.transit(str(req_data['start_lat'])+ ',' + str(req_data['start_lon']), str(req_data['end_lat'])+ ',' + str(req_data['end_lon']))
+#     return jsonify(toReturn), 200
 
 @app.route("/searchStop")
 def searchStop():
@@ -145,12 +146,12 @@ def addUser():
     # Check if there is a valid key in the data
     elif 'key' not in req_data:
         return "Lacking key", 403
-    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key'])) < 1:
+    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key']))[0] < 1:
         return "Incorrect key", 403
     # Next look for user in the data
     elif 'user_id' not in req_data:
         return "No user_id", 404
-    elif int(SQL_EXECUTE("SELECT COUNT (user) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])) < 1:
+    elif int(SQL_EXECUTE("SELECT COUNT (user) FROM users WHERE user_id = :user_id", user_id = req_data['user_id']))[0] < 1:
         return "There is allready a user with the same UUID.", 403
     else:
         SQL_EXECUTE("INSERT INTO users(user_id) VALUES(:user_id)", user_id = req_data['user_id'])
@@ -166,12 +167,12 @@ def addFavorite():
     # Check if there is a valid key in the data
     elif 'key' not in req_data:
         return "Lacking key", 403
-    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key'])) < 1:
+    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key']))[0] < 1:
         return "Incorrect key", 403
     # Next look for user in the database
     elif 'user_id' not in req_data:
         return "No user_id", 404
-    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])) < 1:
+    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id']))[0] < 1:
         return "No user_id", 404
     elif 'type' not in req_data:
         return "No type", 404
@@ -198,12 +199,12 @@ def favoritesQuery():
     # Check if there is a valid key in the data
     elif 'key' not in req_data:
         return "Lacking key", 403
-    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key'])) < 1:
+    elif int(SQL_EXECUTE("SELECT COUNT (key) FROM keys WHERE key = :key", key = req_data['key']))[0] < 1:
         return "Incorrect key", 403
     # Next 2 ifs are to authenticate the user
     elif 'user_id' not in req_data:
         return "No user", 404
-    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id'])) < 1:
+    elif int(SQL_EXECUTE("SELECT COUNT (user_id) FROM users WHERE user_id = :user_id", user_id = req_data['user_id']))[0] < 1:
         return "No user_id", 404
     elif 'type' not in req_data:
         return "No favorite type given", 404
