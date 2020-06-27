@@ -6,6 +6,7 @@ from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
 import flask_sqlalchemy
 import time
+import datetime
 # import direction
 
 # THIS IS THE QUERY TO USE TO JOIN ALL THE TABLES FOR THE DATABASE FOR EFFICEIENCY
@@ -238,6 +239,24 @@ def favoritesQuery():
             return "Invalid type", 404
     return jsonify(toReturn), 200
 
+
+@app.route("/routeInfo")
+def routeInfo():
+    # RETURN all stop_id, stop_lon, stop_lat and stop_name for every stop on a route (will use the nearset trip from the time of query) 
+    req_data = dict(request.args)
+    if not req_data:
+        return "Lacking any data", 404
+    # Check if there is a route
+    elif 'route' not in req_data:
+        return "Lacking route", 404
+    elif req_data['route'] == '':
+        return "No route", 404
+    else:
+        trip = SQL_EXECUTE("SELECT trip_id FROM joined WHERE route_short_name = :route_name AND stop_sequence = '1' AND arrival_time < :now ORDER BY arrival_time LIMIT 1", route_name = req_data['route'], now = datetime.datetime.now())
+        print(trip)
+        toReturn = SQL_EXECUTE("SELECT DISTINCT stop_id, stop_lat, stop_lon, stop_name FROM joined WHERE trip_id = :trip_id ORDER BY stop_sequence", trip_id = trip[0]['trip_id'])
+    return jsonify(toReturn), 200
+
 def errorhandler(e):
     """Handle error"""
     if not isinstance(e, HTTPException):
@@ -249,5 +268,5 @@ def errorhandler(e):
 for code in default_exceptions:
     app.errorhandler(code)(errorhandler)
 
-# Close the database when we are done with it
+# Run the app
 app.run(host="0.0.0.0")
