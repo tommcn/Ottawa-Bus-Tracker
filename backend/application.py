@@ -7,6 +7,7 @@ from werkzeug.exceptions import default_exceptions, HTTPException, InternalServe
 import flask_sqlalchemy
 import time
 import datetime
+import pytz
 # import direction
 
 # THIS IS THE QUERY TO USE TO JOIN ALL THE TABLES FOR THE DATABASE FOR EFFICEIENCY
@@ -252,8 +253,12 @@ def routeInfo():
     elif req_data['route'] == '':
         return "No route", 404
     else:
-        trip = SQL_EXECUTE("SELECT trip_id FROM joined WHERE route_short_name = :route_name AND stop_sequence = '1' AND arrival_time < :now ORDER BY arrival_time LIMIT 1", route_name = req_data['route'], now = datetime.datetime.now())
-        print(trip)
+        # Default offset is 0
+        offset = 0
+        if 'offset' in req_data:
+            offset = req_data['offset']
+        now = datetime.datetime.now(tz=pytz.UTC).astimezone(pytz.timezone('EST'))
+        trip = SQL_EXECUTE("SELECT DISTINCT trip_id FROM joined WHERE route_short_name = :route_name AND stop_sequence = '1' AND arrival_time < :now ORDER BY arrival_time LIMIT 1 OFFSET :offset", route_name = req_data['route'], now = now, offset = offset)
         toReturn = SQL_EXECUTE("SELECT DISTINCT stop_id, stop_lat, stop_lon, stop_name FROM joined WHERE trip_id = :trip_id ORDER BY stop_sequence", trip_id = trip[0]['trip_id'])
     return jsonify(toReturn), 200
 
