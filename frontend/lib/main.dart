@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter_crashlytics/flutter_crashlytics.dart';
 import 'dart:async';
 
@@ -14,7 +12,6 @@ import 'package:ottawa_bus_tracker/home.dart';
 import 'package:provider/provider.dart';
 
 AuthService _auth = AuthService();
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,15 +33,16 @@ void main() async {
 
   runZoned<Future<Null>>(() async {
     runApp(
-  ChangeNotifierProvider<AppStateNotifier>(
-    create: (context) => AppStateNotifier(),
-    child: MyApp(),
-  ),
-);
+      ChangeNotifierProvider<AppStateNotifier>(
+        create: (context) => AppStateNotifier(),
+        child: MyApp(),
+      ),
+    );
   }, onError: (error, stackTrace) async {
     // Whenever an error occurs, call the `reportCrash` function. This will send
     // Dart errors to our dev console or Crashlytics depending on the environment.
-    await FlutterCrashlytics().reportCrash(error, stackTrace, forceCrash: false);
+    await FlutterCrashlytics()
+        .reportCrash(error, stackTrace, forceCrash: false);
   });
 }
 
@@ -63,12 +61,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppStateNotifier>(
       builder: (context, appState, child) {
+        //    FlutterCrashlytics().reportCrash("forced crash", StackTrace.current, forceCrash: true);
         return MaterialApp(
           title: "App",
           theme: ThemeData(
             primarySwatch: Colors.red,
-            fontFamily:
-                GoogleFonts.roboto(fontWeight: FontWeight.w100).fontFamily,
             visualDensity: VisualDensity.adaptivePlatformDensity,
           ),
           darkTheme: ThemeData.dark(),
@@ -94,29 +91,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomPadding: false,
-      body: Column(
-        children: <Widget>[
-          Container(
-            child: LoginSignupPage(),
-          ),
-          Divider(
-            thickness: 2,
-            height: 10,
-            indent: 50,
-            endIndent: 50,
-          ),
-          SignInButton(
-            Buttons.Google,
-            onPressed: () {
-              globals.auth.signInWithGoogle().whenComplete(() {
-                if (globals.isLoggedIn) {
-                  Navigator.push(context, ScaleRoute(page: HomePage()));
-                }
-              });
-            },
-          ),
-        ],
-      ),
+      body: LoginSignupPage(),
     );
   }
 }
