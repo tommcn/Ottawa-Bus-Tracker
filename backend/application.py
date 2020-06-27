@@ -241,8 +241,8 @@ def favoritesQuery():
     return jsonify(toReturn), 200
 
 
-@app.route("/routeInfo")
-def routeInfo():
+@app.route("/routeStops")
+def routeStops():
     # RETURN all stop_id, stop_lon, stop_lat and stop_name for every stop on a route (will use the nearset trip from the time of query) 
     req_data = dict(request.args)
     if not req_data:
@@ -259,7 +259,7 @@ def routeInfo():
             offset = req_data['offset']
         now = datetime.datetime.now(tz=pytz.UTC).astimezone(pytz.timezone('EST'))
         trip = SQL_EXECUTE("SELECT DISTINCT trip_id FROM joined WHERE route_short_name = :route_name AND stop_sequence = '1' AND arrival_time < :now ORDER BY arrival_time LIMIT 1 OFFSET :offset", route_name = req_data['route'], now = now, offset = offset)
-        toReturn = SQL_EXECUTE("SELECT DISTINCT stop_id, stop_lat, stop_lon, stop_name FROM joined WHERE trip_id = :trip_id ORDER BY stop_sequence", trip_id = trip[0]['trip_id'])
+        toReturn = SQL_EXECUTE("SELECT DISTINCT trip_id, stop_id, stop_lat, stop_lon, stop_name FROM joined WHERE trip_id = :trip_id ORDER BY stop_sequence", trip_id = trip[0]['trip_id'])
     return jsonify(toReturn), 200
 
 def errorhandler(e):
