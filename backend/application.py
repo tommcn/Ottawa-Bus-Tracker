@@ -142,6 +142,21 @@ def searchStop():
             return "Invalid order", 404
     return jsonify(toReturn), 200
 
+@app.route("/polylines")
+def polylines():
+    # RETURN a list of all stops that contain the query
+    req_data = dict(request.args)
+    if not req_data:
+        return "Lacking any data", 404
+    # Check if there is a query in the data
+    elif 'shape_id' not in req_data:
+        return "Lacking shape_id", 404
+    elif req_data['shape_id'] == '':
+        return "No shape_id", 404
+    else:
+        toReturn = SQL_EXECUTE("SELECT polyline FROM polylines WHERE shape_id = :shape_id", shape_id = req_data['shape_id'])
+    return jsonify(toReturn), 200
+
 @app.route("/adduser")
 def addUser():
     # ADD a user to the database
