@@ -274,7 +274,7 @@ def routeStops():
             offset = req_data['offset']
         now = datetime.datetime.now(tz=pytz.UTC).astimezone(pytz.timezone('EST'))
         trip = SQL_EXECUTE("SELECT DISTINCT trip_id FROM joined WHERE route_short_name = :route_name AND stop_sequence = '1' AND arrival_time < :now ORDER BY arrival_time LIMIT 1 OFFSET :offset", route_name = req_data['route'], now = now, offset = offset)
-        toReturn = SQL_EXECUTE("SELECT DISTINCT trip_id, stop_id, stop_lat, stop_lon, stop_name FROM joined WHERE trip_id = :trip_id ORDER BY stop_sequence", trip_id = trip[0]['trip_id'])
+        toReturn = SQL_EXECUTE("SELECT DISTINCT shape_id, trip_id, stop_id, stop_lat, stop_lon, stop_name FROM joined WHERE trip_id = :trip_id ORDER BY stop_sequence", trip_id = trip[0]['trip_id'])
     return jsonify(toReturn), 200
 
 def errorhandler(e):

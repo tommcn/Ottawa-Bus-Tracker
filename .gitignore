@@ -51,3 +51,4 @@ app.*.map.json
 backend/google_transit_oc_ottawa.db
 *.csv
 *.sqbpro
+backend/google_transit/polylines.txt
