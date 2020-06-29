@@ -8,6 +8,7 @@ import flask_sqlalchemy
 import time
 import datetime
 import pytz
+import zipfile
 # import direction
 
 # THIS IS THE QUERY TO USE TO JOIN ALL THE TABLES FOR THE DATABASE FOR EFFICEIENCY
@@ -32,6 +33,12 @@ if len(sys.argv) != 2:
     sys.exit()
 
 dbFile = sys.argv[1]
+
+# THIS PART IS TO UNZIP THE DATABASE INTO A HEROKU SERVER 
+if not os.path.isfile(dbFile):
+    with zipfile.ZipFile(dbFile[:-3] + '.zip', 'r') as zip_ref:
+        zip_ref.extractall('./')
+        zip_ref.extractall(dbFile)
 
 # Turns a list of tuples into a dict for SQLite
 def DICT_FACTORY(cursor, row):
