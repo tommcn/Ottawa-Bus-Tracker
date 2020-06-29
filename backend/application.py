@@ -288,5 +288,5 @@ def errorhandler(e):
 for code in default_exceptions:
     app.errorhandler(code)(errorhandler)
 
-# Run the app
-app.run(host="0.0.0.0")
+if __name__ == "__main__": 
+    app.run(host="0.0.0.0")
