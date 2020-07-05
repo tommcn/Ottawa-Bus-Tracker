@@ -731,11 +731,16 @@ class RoutesMenu extends StatelessWidget {
   }
 }
 
-class RouteDetail extends StatelessWidget {
+class RouteDetail extends StatefulWidget {
   RouteDetail(this.routeID, this.offset);
   final String routeID;
   final int offset;
+  RouteDetailState createState() => RouteDetailState();
+}
 
+class RouteDetailState extends State<RouteDetail> {
+  String routeID;
+  int offset;
   Widget _scrollingList(ScrollController sc, data, _pc) {
     return ListView.builder(
       controller: sc,
@@ -756,11 +761,23 @@ class RouteDetail extends StatelessWidget {
               children: [
                 IconButton(
                   icon: Icon(Icons.arrow_left),
-                  onPressed: () {},
+                  onPressed: () {
+                    print("Offset before: " + offset.toString());
+                    setState(() {
+                      offset--;
+                    });
+                    print("Offset: " + offset.toString());
+                  },
                 ),
                 IconButton(
                   icon: Icon(Icons.arrow_right),
-                  onPressed: () {},
+                  onPressed: () {
+                    print("Offset before: " + offset.toString());
+                    setState(() {
+                      offset++;
+                    });
+                    print("Offset: " + offset.toString());
+                  },
                 )
               ],
             )
@@ -770,7 +787,7 @@ class RouteDetail extends StatelessWidget {
 
         return Center(
             child:
-                Text(data[i]['stop_name'] + " - " + data[i]['arrival_time']));
+                Text(data[i]['stop_name'] +  " - " + data[i]['arrival_time']));
       },
     );
   }
@@ -792,7 +809,7 @@ class RouteDetail extends StatelessWidget {
             builder: (BuildContext context, snapshot) {
               print("Herer");
               if (snapshot.connectionState == ConnectionState.done) {
-                print(snapshot.data);
+                print(snapshot.data.body);
                 var data = json.decode(snapshot.data.body);
                 return Stack(
                   children: [
