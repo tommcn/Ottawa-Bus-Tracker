@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_signin_button/flutter_signin_button.dart';
 import 'package:flutter_crashlytics/flutter_crashlytics.dart';
 import 'dart:async';
 
 import 'package:ottawa_bus_tracker/globals.dart' as globals;
-import 'package:ottawa_bus_tracker/helpers/transitions.dart';
 import 'package:ottawa_bus_tracker/helpers/widgets.dart';
 import 'package:ottawa_bus_tracker/auth.dart';
-import 'package:ottawa_bus_tracker/home.dart';
 
 import 'package:provider/provider.dart';
 

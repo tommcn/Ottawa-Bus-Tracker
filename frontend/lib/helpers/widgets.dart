@@ -2,11 +2,15 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
 import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
 import 'package:ottawa_bus_tracker/main.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
+import 'package:sprintf/sprintf.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webfeed/webfeed.dart';
 import 'package:location/location.dart';
 import 'package:firebase_performance/firebase_performance.dart';
@@ -191,6 +195,17 @@ class LoginSignupPageState extends State<LoginSignupPage> {
                     ),
                   ),
                 ),
+                OutlineButton(
+                  onPressed: () {
+                    Navigator.push(context, ScaleRoute(page: HomePage()));
+                  },
+                  child: Text(
+                    "Continue without signing in",
+                    style: TextStyle(
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
                 SignInButton(
                   Buttons.Apple,
                   onPressed: () {
@@ -368,18 +383,22 @@ Future getCloseStops(LatLng pos) async {
       FirebasePerformance.instance.newTrace("Get Nearby Stops");
   myTrace.start();
 
-  print("Getting");
+  print("Gettings");
+  print("uris:");
   final queryParameters = {
     "distance": 0.005.toString(),
     "lon": pos.longitude.toString(),
     "lat": pos.latitude.toString(),
   };
+  print("uria:");
   final uri = Uri.http(globals.backend, '/stops', queryParameters);
+  print("uri:");
   print(uri);
   final response = await http.get(uri);
 
   myTrace.setMetric("responce code", response.statusCode);
   myTrace.stop();
+  print(":");
 
   return response;
 }
@@ -406,8 +425,10 @@ class SettingsPage extends StatelessWidget {
           ]),
           Row(
             children: [
-              Text(
-                  "Signed in as ${globals.user.email ?? 'an Apple ID user'}"),
+              if (globals.isLoggedIn)
+                Text(
+                    "Signed in as ${globals.user.email ?? 'an Apple ID user'}"),
+              if (!globals.isLoggedIn) Text("Signed in anonymously"),
             ],
           ),
           Row(
@@ -444,7 +465,6 @@ class Map extends StatefulWidget {
 }
 
 class _MapState extends State<Map> {
-
   Widget buildTable(List data) {
     var colls = <DataColumn>[];
     var dcell = <DataRow>[];
@@ -489,8 +509,10 @@ class _MapState extends State<Map> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             if (snapshot.data != null) {
+              print(snapshot.data);
               LatLng pos =
                   LatLng(snapshot.data.latitude, snapshot.data.longitude);
+              globals.userPosition = pos;
               Set<Marker> _markers = {};
               _markers.add(Marker(
                 alpha: 0.5,
@@ -502,6 +524,7 @@ class _MapState extends State<Map> {
                     LatLng(snapshot.data.latitude, snapshot.data.longitude)),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done) {
+                    print(snapshot.data);
                     var data = json.decode(snapshot.data.body);
                     Set<Marker> _closeStations = {};
                     for (var s in data) {
@@ -550,6 +573,9 @@ class _MapState extends State<Map> {
                                                 if (routes != [null])
                                                   for (var route in routes)
                                                     Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
                                                       children: [
                                                         Text(
                                                           route['RouteNo']
@@ -560,23 +586,12 @@ class _MapState extends State<Map> {
                                                                   .substring(
                                                                       0,
                                                                       route['RouteHeading'].length >
-                                                                              20
-                                                                          ? 20
+                                                                              15
+                                                                          ? 15
                                                                           : null),
                                                         ),
-                                                        Container(
-                                                          child: IconButton(
-                                                            padding: EdgeInsets.all(1),
-                                                            visualDensity: VisualDensity.compact,
-                                                            onPressed: () {
-                                                            },
-                                                            icon: Icon(
-                                                              Icons.star_border,
-                                                              color: Colors
-                                                                  .yellow[600],
-                                                            ),
-                                                          ),
-                                                        )
+                                                        RoutesMenu(
+                                                            route['RouteNo'], s['stop_lat'], s['stop_lon']),
                                                       ],
                                                     ),
                                                 if (data['Routes']['Route'] ==
@@ -615,6 +630,7 @@ class _MapState extends State<Map> {
                     _closeStations.add(_markers.first);
                     return GoogleMap(
                       onMapCreated: _onMapCreated,
+                      myLocationButtonEnabled: false,
                       initialCameraPosition: CameraPosition(
                         target: pos,
                         zoom: 15.0,
@@ -662,4 +678,275 @@ Future<LocationData> getUserLocation() async {
 
   _locationData = await location.getLocation();
   return _locationData;
+}
+
+class RoutesMenu extends StatelessWidget {
+  final choices = ["See schedule", "Get Directions"];
+
+  RoutesMenu(this.routeID, this.lat, this.lon);
+
+  final String routeID;
+  final double lat;
+  final double lon;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton(
+      icon: Icon(Icons.more_vert),
+      elevation: 3.2,
+      tooltip: 'More',
+      onSelected: (selection) {
+        switch (selection) {
+          case "See schedule":
+            print("Get schedule");
+            print(routeID.toString());
+            Navigator.push(
+              context,
+              ScaleRoute(
+                page: RouteDetail(
+                  routeID,
+                  0,
+                ),
+              ),
+            );
+            break;
+
+          case "Get Directions":
+            print("Launching url");
+            String url = sprintf("https://www.google.com/maps/dir/?api=1&destination=%s,%s&travelmode=walking", [lat.toString(), lon.toString()]);
+            url = Uri.encodeFull(url);
+            _launchURL(url);
+            break;
+        }
+      },
+      itemBuilder: (BuildContext context) {
+        return choices.map((choice) {
+          return PopupMenuItem(
+            value: choice,
+            child: Text(choice),
+          );
+        }).toList();
+      },
+    );
+  }
+}
+
+class RouteDetail extends StatelessWidget {
+  RouteDetail(this.routeID, this.offset);
+  final String routeID;
+  final int offset;
+
+  Widget _scrollingList(ScrollController sc, data, _pc) {
+    return ListView.builder(
+      controller: sc,
+      itemCount: data == null ? 1 : data.length + 1,
+      itemBuilder: (BuildContext context, int i) {
+        if (i == 0) {
+          // return the header
+          return new Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+              child: Text(
+                "Schedule",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_left),
+                  onPressed: () {},
+                ),
+                IconButton(
+                  icon: Icon(Icons.arrow_right),
+                  onPressed: () {},
+                )
+              ],
+            )
+          ]);
+        }
+        i -= 1;
+
+        return Center(
+            child:
+                Text(data[i]['stop_name'] + " - " + data[i]['arrival_time']));
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    BorderRadiusGeometry radius = BorderRadius.only(
+      topLeft: Radius.circular(24.0),
+      topRight: Radius.circular(24.0),
+    );
+    PanelController _pc = new PanelController();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Route " + routeID + " - Schedule"),
+      ),
+      body: Center(
+        child: FutureBuilder(
+            future: getRouteInfo(routeID, offset),
+            builder: (BuildContext context, snapshot) {
+              print("Herer");
+              if (snapshot.connectionState == ConnectionState.done) {
+                print(snapshot.data);
+                var data = json.decode(snapshot.data.body);
+                return Stack(
+                  children: [
+                    FutureBuilder(
+                      future: getPolyline(data[0]['shape_id'].toString()),
+                      builder: (BuildContext context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done) {
+                          var decoded = json.decode(snapshot.data.body);
+                          PolylinePoints polylinePoints = PolylinePoints();
+
+                          List<PointLatLng> result = polylinePoints
+                              .decodePolyline(decoded[0]['polyline']);
+                          List<LatLng> _markers = [];
+
+                          for (var i in result) {
+                            _markers.add(LatLng(i.latitude, i.longitude));
+                          }
+
+                          Set<Marker> stops = Set();
+                          for (var i in data) {
+                            stops.add(
+                              Marker(
+                                infoWindow: InfoWindow(
+                                    title: i['stop_name'],
+                                    snippet: i['arrival_time']),
+                                markerId: MarkerId(i['stop_id']),
+                                position: LatLng(i['stop_lat'], i['stop_lon']),
+                              ),
+                            );
+                          }
+                          stops.add(
+                            Marker(
+                              alpha: 0.5,
+                              markerId: MarkerId("upos"),
+                              position: globals.userPosition,
+                            ),
+                          );
+                          Polyline polyline = Polyline(
+                            width: 1,
+                            visible: true,
+                            points: _markers,
+                            polylineId: PolylineId(
+                              decoded[0]['polyline'],
+                            ),
+                          );
+
+                          Set<Polyline> polylines = Set();
+                          polylines.add(polyline);
+
+                          return GoogleMap(
+                            markers: stops,
+                            polylines: polylines,
+                            myLocationButtonEnabled: false,
+                            initialCameraPosition: CameraPosition(
+                              zoom: 14,
+                              target: globals.userPosition,
+                            ),
+                          );
+                        } else {
+                          return CircularProgressIndicator();
+                        }
+                      },
+                    ),
+                    SlidingUpPanel(
+                      borderRadius: radius,
+                      controller: _pc,
+                      panelBuilder: (ScrollController sc) =>
+                          _scrollingList(sc, data, _pc),
+                    ),
+                  ],
+                );
+              } else {
+                return CircularProgressIndicator();
+              }
+            }),
+      ),
+    );
+  }
+}
+
+class SearchView extends StatefulWidget {
+  @override
+  SearchViewState createState() => SearchViewState();
+}
+
+class SearchViewState extends State<SearchView> {
+  final myController = TextEditingController();
+  
+  var results = [];
+
+  @override
+  void dispose() {
+    // Clean up the controller when the widget is disposed.
+    myController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextField(
+          controller: myController,
+          decoration: InputDecoration(
+            icon: Icon(Icons.search),
+            labelText: "Search",
+          ),
+        ),
+        OutlineButton(
+          onPressed: () {},
+          child: Text("Search"),
+        ),
+        Placeholder(),
+      ],
+    );
+  }
+}
+
+Future getRouteInfo(String routeID, int offset) async {
+  final Trace myTrace = FirebasePerformance.instance.newTrace("Get Route Info");
+  myTrace.start();
+
+  print("Getting route info");
+  final queryParameters = {'route': routeID, "offset": offset.toString()};
+  final uri = Uri.http(globals.backend, '/routeStops', queryParameters);
+  print(uri);
+  final response = await http.get(uri);
+
+  myTrace.setMetric("responce code", response.statusCode);
+  myTrace.stop();
+
+  return response;
+}
+
+Future getPolyline(String shapeId) async {
+  final Trace myTrace = FirebasePerformance.instance.newTrace("Get Polyline");
+  myTrace.start();
+
+  print("Getting");
+  final queryParameters = {'shape_id': shapeId};
+  final uri = Uri.http(globals.backend, '/polylines', queryParameters);
+  print(uri);
+  final response = await http.get(uri);
+
+  myTrace.setMetric("responce code", response.statusCode);
+  myTrace.stop();
+
+  return response;
+}
+
+_launchURL(url) async {
+  if (await canLaunch(url)) {
+    await launch(url);
+  } else {
+    throw 'Could not launch $url';
+  }
 }

@@ -15,7 +15,8 @@ import GoogleMaps
     if(FirebaseApp.app() == nil){
         FirebaseApp.configure()
     }
-    GMSServices.provideAPIKey(ProcessInfo.processInfo.environment["GOOGLE_MAPS_API_KEY"]!)
+   GMSServices.provideAPIKey(ProcessInfo.processInfo.environment["GOOGLE_MAPS_API_KEY"]!)
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }
