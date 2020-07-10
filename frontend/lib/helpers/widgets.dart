@@ -508,6 +508,7 @@ class _MapState extends State<Map> {
         future: getUserLocation(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
+            print("GOt location");
             if (snapshot.data != null) {
               print(snapshot.data);
               LatLng pos =
@@ -591,7 +592,9 @@ class _MapState extends State<Map> {
                                                                           : null),
                                                         ),
                                                         RoutesMenu(
-                                                            route['RouteNo'], s['stop_lat'], s['stop_lon']),
+                                                            route['RouteNo'],
+                                                            s['stop_lat'],
+                                                            s['stop_lon']),
                                                       ],
                                                     ),
                                                 if (data['Routes']['Route'] ==
@@ -654,6 +657,7 @@ class _MapState extends State<Map> {
 }
 
 Future<LocationData> getUserLocation() async {
+  print("Getting permission");
   Location location = new Location();
 
   bool _serviceEnabled;
@@ -667,16 +671,22 @@ Future<LocationData> getUserLocation() async {
       return null;
     }
   }
+  print("Checking permissions");
 
   _permissionGranted = await location.hasPermission();
+  print("Running ifs");
   if (_permissionGranted == PermissionStatus.denied) {
     _permissionGranted = await location.requestPermission();
+    print("Requesting permisison");
     if (_permissionGranted != PermissionStatus.granted) {
+      print("Failed");
       return null;
     }
   }
 
+  print("Got permisison");
   _locationData = await location.getLocation();
+  print(_locationData.toString());
   return _locationData;
 }
 
@@ -700,11 +710,12 @@ class RoutesMenu extends StatelessWidget {
           case "See schedule":
             print("Get schedule");
             print(routeID.toString());
+            
             Navigator.push(
               context,
               ScaleRoute(
                 page: RouteDetail(
-                  routeID,
+                  routeID.toString(),
                   0,
                 ),
               ),
@@ -713,7 +724,9 @@ class RoutesMenu extends StatelessWidget {
 
           case "Get Directions":
             print("Launching url");
-            String url = sprintf("https://www.google.com/maps/dir/?api=1&destination=%s,%s&travelmode=walking", [lat.toString(), lon.toString()]);
+            String url = sprintf(
+                "https://www.google.com/maps/dir/?api=1&destination=%s,%s&travelmode=walking",
+                [lat.toString(), lon.toString()]);
             url = Uri.encodeFull(url);
             _launchURL(url);
             break;
@@ -787,18 +800,25 @@ class RouteDetailState extends State<RouteDetail> {
 
         return Center(
             child:
-                Text(data[i]['stop_name'] +  " - " + data[i]['arrival_time']));
+                Text(data[i]['stop_name'] + " - " + data[i]['arrival_time']));
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    print("Building");
     BorderRadiusGeometry radius = BorderRadius.only(
       topLeft: Radius.circular(24.0),
       topRight: Radius.circular(24.0),
     );
     PanelController _pc = new PanelController();
+    print("HI");
+    if (offset  == null)
+      setState(() {
+        routeID = widget.routeID;
+        offset = widget.offset;
+      });
     return Scaffold(
       appBar: AppBar(
         title: Text("Route " + routeID + " - Schedule"),
@@ -865,7 +885,7 @@ class RouteDetailState extends State<RouteDetail> {
                             myLocationButtonEnabled: false,
                             initialCameraPosition: CameraPosition(
                               zoom: 14,
-                              target: globals.userPosition,
+                              target: stops.first.position,
                             ),
                           );
                         } else {
@@ -891,13 +911,17 @@ class RouteDetailState extends State<RouteDetail> {
 }
 
 class SearchView extends StatefulWidget {
+  final results;
+
+  SearchView({this.results});
+
   @override
   SearchViewState createState() => SearchViewState();
 }
 
 class SearchViewState extends State<SearchView> {
   final myController = TextEditingController();
-  
+  ScrollController _listcontroller = new ScrollController();
   var results = [];
 
   @override
@@ -919,20 +943,155 @@ class SearchViewState extends State<SearchView> {
           ),
         ),
         OutlineButton(
-          onPressed: () {},
+          onPressed: () {
+            getSearch(myController.text.toString()).then((res) {
+              print('In Builder');
+              print("${res.body}");
+              setState(() {
+                results = json.decode(res.body);
+              });
+            });
+          },
           child: Text("Search"),
         ),
-        Placeholder(),
+        Container(
+          height: 400,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            controller: _listcontroller,
+            shrinkWrap: true,
+            children: [
+              for (var res in results)
+                ListTile(
+                  leading: Icon(Icons.directions_bus),
+                  title: Text(res['stop_name']),
+                  subtitle: Text("Code: ${res['stop_code']}"),
+                  trailing: IconButton(
+                      icon: Icon(Icons.more_vert),
+                      onPressed: () {
+                        var s = res;
+                        showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return FutureBuilder(
+                                future: getNextTrips(s['stop_code'].toString()),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.done) {
+                                    var data = json.decode(snapshot.data.body);
+                                    data = data['GetRouteSummaryForStopResult'];
+                                    var routes = data['Routes']['Route'];
+                                    if (routes is! List) routes = [routes];
+                                    return new AlertDialog(
+                                      scrollable: true,
+                                      title: Text(s['stop_name']),
+                                      content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text("Stop Number: "),
+                                                Text(s['stop_code'].toString()),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  "Next Buses:",
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .headline6,
+                                                )
+                                              ],
+                                            ),
+                                            if (routes != [null])
+                                              for (var route in routes)
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      route['RouteNo']
+                                                              .toString() +
+                                                          "-" +
+                                                          route['RouteHeading']
+                                                              .toString()
+                                                              .substring(
+                                                                  0,
+                                                                  route['RouteHeading']
+                                                                              .length >
+                                                                          15
+                                                                      ? 15
+                                                                      : null),
+                                                    ),
+                                                    RoutesMenu(
+                                                        route['RouteNo'],
+                                                        s['stop_lat'],
+                                                        s['stop_lon']),
+                                                  ],
+                                                ),
+                                            if (data['Routes']['Route'] == null)
+                                              Text("No data")
+                                          ]),
+                                      actions: [
+                                        OutlineButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: Text("Exit"),
+                                        ),
+                                      ],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10.0),
+                                      ),
+                                    );
+                                  } else {
+                                    return AlertDialog(
+                                      title: Text("Loading"),
+                                      content: LinearProgressIndicator(
+                                        value: null,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10.0),
+                                      ),
+                                    );
+                                  }
+                                },
+                              );
+                            });
+                      }),
+                ),
+            ],
+          ),
+        )
       ],
     );
   }
 }
 
-Future getRouteInfo(String routeID, int offset) async {
+Future getSearch(String query) async {
   final Trace myTrace = FirebasePerformance.instance.newTrace("Get Route Info");
   myTrace.start();
 
+  print("Getting search info");
+  final queryParameters = {'query': query};
+  final uri = Uri.http(globals.backend, '/searchStop', queryParameters);
+  print(uri);
+  final response = await http.get(uri);
+
+  myTrace.setMetric("responce code", response.statusCode);
+  myTrace.stop();
+
+  return response;
+}
+
+Future getRouteInfo(String routeID, int offset) async {
   print("Getting route info");
+  final Trace myTrace = FirebasePerformance.instance.newTrace("Get Route Info");
+  myTrace.start();
+
   final queryParameters = {'route': routeID, "offset": offset.toString()};
   final uri = Uri.http(globals.backend, '/routeStops', queryParameters);
   print(uri);
