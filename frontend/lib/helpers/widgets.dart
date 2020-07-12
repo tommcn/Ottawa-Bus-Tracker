@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
 import 'dart:ui' as ui;
@@ -318,20 +319,16 @@ class RSSDetail extends StatelessWidget {
   }
 }
 
-Future getNextTrips(String stopNo) async {
+Future getNextTrips(String stopId) async {
   print("Getting trips");
   final Trace myTrace = FirebasePerformance.instance.newTrace("Get Next Trips");
   myTrace.start();
   final queryParameters = {
-    "appID": globals.ocAppId,
-    "apiKey": globals.ocApiKey,
-    "stopNo": stopNo,
-    "format": "json"
+    "stop_id": stopId,
   };
-  final uri = Uri.http("api.octranspo1.com",
-      '/v1.3/GetNextTripsForStopAllRoutes', queryParameters);
+  final uri = Uri.http(globals.backend, '/time', queryParameters);
   print(uri);
-  final response = await http.post(uri);
+  final response = await http.get(uri);
 
   myTrace.setMetric("responce code", response.statusCode);
   myTrace.stop();
@@ -538,16 +535,15 @@ class _MapState extends State<Map> {
                                 builder: (BuildContext context) {
                                   return FutureBuilder(
                                     future:
-                                        getNextTrips(s['stop_code'].toString()),
+                                        getNextTrips(s['stop_id'].toString()),
                                     builder: (context, snapshot) {
                                       if (snapshot.connectionState ==
                                           ConnectionState.done) {
                                         var data =
                                             json.decode(snapshot.data.body);
-                                        data = data[
-                                            'GetRouteSummaryForStopResult'];
-                                        var routes = data['Routes']['Route'];
-                                        if (routes is! List) routes = [routes];
+                                        var routes = data;
+                                        for (var route in routes)
+                                          print(route.toString());
                                         return new AlertDialog(
                                           scrollable: true,
                                           title: Text(s['stop_name']),
@@ -571,35 +567,55 @@ class _MapState extends State<Map> {
                                                     )
                                                   ],
                                                 ),
-                                                if (routes != [null])
-                                                  for (var route in routes)
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      children: [
-                                                        Text(
-                                                          route['RouteNo']
-                                                                  .toString() +
-                                                              "-" +
-                                                              route['RouteHeading']
-                                                                  .toString()
-                                                                  .substring(
-                                                                      0,
-                                                                      route['RouteHeading'].length >
-                                                                              15
-                                                                          ? 15
-                                                                          : null),
-                                                        ),
-                                                        RoutesMenu(
-                                                            route['RouteNo'],
-                                                            s['stop_lat'],
-                                                            s['stop_lon']),
-                                                      ],
-                                                    ),
-                                                if (data['Routes']['Route'] ==
-                                                    null)
-                                                  Text("No data")
+                                                for (var route in routes)
+                                                  Column(
+                                                    children: [
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          Text(
+                                                            route['route_short_name']
+                                                                    .toString() +
+                                                                "-" +
+                                                                route['trip_headsign']
+                                                                    .toString()
+                                                                    .substring(
+                                                                        0,
+                                                                        route['trip_headsign'].length >
+                                                                                10
+                                                                            ? 10
+                                                                            : null),
+                                                          ),
+                                                          RoutesMenu(
+                                                              route['route_short_name']
+                                                                  .toString(),
+                                                              s['stop_lat'],
+                                                              s['stop_lon']),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text(
+                                                            DateFormat.Hms()
+                                                                .format(DateTime.parse(
+                                                                        '2020-01-01T' +
+                                                                            route[
+                                                                                'arrival_time'])
+                                                                    .add(DateTime
+                                                                            .now()
+                                                                        .timeZoneOffset))
+                                                                .toString(),
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .grey),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                if (data == []) Text("No data")
                                               ]),
                                           actions: [
                                             OutlineButton(
@@ -710,7 +726,7 @@ class RoutesMenu extends StatelessWidget {
           case "See schedule":
             print("Get schedule");
             print(routeID.toString());
-            
+
             Navigator.push(
               context,
               ScaleRoute(
@@ -799,8 +815,15 @@ class RouteDetailState extends State<RouteDetail> {
         i -= 1;
 
         return Center(
-            child:
-                Text(data[i]['stop_name'] + " - " + data[i]['arrival_time']));
+            child: Text(
+          data[i]['stop_name'] +
+              " - " +
+              DateFormat.Hms()
+                  .format(
+                      DateTime.parse('2020-01-01T' + data[i]['arrival_time'])
+                          .add(DateTime.now().timeZoneOffset))
+                  .toString(),
+        ));
       },
     );
   }
@@ -814,7 +837,7 @@ class RouteDetailState extends State<RouteDetail> {
     );
     PanelController _pc = new PanelController();
     print("HI");
-    if (offset  == null)
+    if (offset == null)
       setState(() {
         routeID = widget.routeID;
         offset = widget.offset;
@@ -955,7 +978,7 @@ class SearchViewState extends State<SearchView> {
           child: Text("Search"),
         ),
         Container(
-          height: 400,
+          height: 300,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             controller: _listcontroller,
@@ -974,14 +997,14 @@ class SearchViewState extends State<SearchView> {
                             context: context,
                             builder: (BuildContext context) {
                               return FutureBuilder(
-                                future: getNextTrips(s['stop_code'].toString()),
+                                future: getNextTrips(s['stop_id'].toString()),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState ==
                                       ConnectionState.done) {
                                     var data = json.decode(snapshot.data.body);
-                                    data = data['GetRouteSummaryForStopResult'];
-                                    var routes = data['Routes']['Route'];
-                                    if (routes is! List) routes = [routes];
+                                    var routes = data;
+                                    for (var route in routes)
+                                      print(route.toString());
                                     return new AlertDialog(
                                       scrollable: true,
                                       title: Text(s['stop_name']),
@@ -1004,35 +1027,54 @@ class SearchViewState extends State<SearchView> {
                                                 )
                                               ],
                                             ),
-                                            if (routes != [null])
-                                              for (var route in routes)
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      route['RouteNo']
-                                                              .toString() +
-                                                          "-" +
-                                                          route['RouteHeading']
-                                                              .toString()
-                                                              .substring(
-                                                                  0,
-                                                                  route['RouteHeading']
-                                                                              .length >
-                                                                          15
-                                                                      ? 15
-                                                                      : null),
-                                                    ),
-                                                    RoutesMenu(
-                                                        route['RouteNo'],
-                                                        s['stop_lat'],
-                                                        s['stop_lon']),
-                                                  ],
-                                                ),
-                                            if (data['Routes']['Route'] == null)
-                                              Text("No data")
+                                            for (var route in routes)
+                                              Column(
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        route['route_short_name']
+                                                                .toString() +
+                                                            "-" +
+                                                            route['trip_headsign']
+                                                                .toString()
+                                                                .substring(
+                                                                    0,
+                                                                    route['trip_headsign'].length >
+                                                                            10
+                                                                        ? 10
+                                                                        : null),
+                                                      ),
+                                                      RoutesMenu(
+                                                          route['route_short_name']
+                                                              .toString(),
+                                                          s['stop_lat'],
+                                                          s['stop_lon']),
+                                                    ],
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        DateFormat.Hms()
+                                                            .format(DateTime.parse(
+                                                                    '2020-01-01T' +
+                                                                        route[
+                                                                            'arrival_time'])
+                                                                .add(DateTime
+                                                                        .now()
+                                                                    .timeZoneOffset))
+                                                            .toString(),
+                                                        style: TextStyle(
+                                                            color: Colors.grey),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            if (data == []) Text("No data")
                                           ]),
                                       actions: [
                                         OutlineButton(
@@ -1125,4 +1167,8 @@ _launchURL(url) async {
   } else {
     throw 'Could not launch $url';
   }
+}
+
+String format(DateTime value) {
+  return "${value.hour}:${value.minute}:${value.second}";
 }

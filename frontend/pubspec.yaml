@@ -43,6 +43,7 @@ dependencies:
   sliding_up_panel: ^1.0.2
   url_launcher: ^5.4.11
   sprintf: "^4.0.0"
+  flutter_native_timezone: "^1.0.4"
 
   
   firebase_core: ^0.4.0+9
