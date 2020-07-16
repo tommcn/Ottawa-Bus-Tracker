@@ -3,10 +3,11 @@ import 'package:flutter_crashlytics/flutter_crashlytics.dart';
 import 'dart:async';
 
 import 'package:ottawa_bus_tracker/globals.dart' as globals;
-import 'package:ottawa_bus_tracker/helpers/widgets.dart';
 import 'package:ottawa_bus_tracker/auth.dart';
 
 import 'package:provider/provider.dart';
+
+import 'home.dart';
 
 AuthService _auth = AuthService();
 
@@ -88,7 +89,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomPadding: false,
-      body: LoginSignupPage(),
+      body: HomePage(),
     );
   }
 }

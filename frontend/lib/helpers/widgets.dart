@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -27,6 +29,13 @@ import 'transitions.dart';
 import '../home.dart';
 
 final backgroundPaint = LoginPainter();
+  Uint8List markerIconBytes;
+getBytesFromAsset(String path, int width) async {
+    ByteData data = await rootBundle.load(path);
+    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(), targetWidth: width);
+    ui.FrameInfo fi = await codec.getNextFrame();
+    markerIconBytes =  (await fi.image.toByteData(format: ui.ImageByteFormat.png)).buffer.asUint8List();
+}
 
 class AppleSignInAvailable {
   AppleSignInAvailable(this.isAvailable);
@@ -492,12 +501,26 @@ class _MapState extends State<Map> {
       rows: dcell,
     );
   }
-
+  BitmapDescriptor pinLocationIcon;
   GoogleMapController mapController;
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
   }
+  
+  @override
+  void initState() {
+    print('INIT STATE-------------');
+    super.initState();
+    setCustomMapPin();
+    getBytesFromAsset('assets/location_icon.png', 50);
+  }   
+  void setCustomMapPin() async {
+    print('assets/location_icon.png');
+      pinLocationIcon = await BitmapDescriptor.fromAssetImage(
+      ImageConfiguration(devicePixelRatio: 2.5, size: Size(0.5, 0.5)),
+      'assets/location_icon.png');
+   }
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +536,8 @@ class _MapState extends State<Map> {
               globals.userPosition = pos;
               Set<Marker> _markers = {};
               _markers.add(Marker(
-                alpha: 0.5,
+                alpha: 1,
+                icon: BitmapDescriptor.fromBytes(markerIconBytes),
                 markerId: MarkerId("curPos"),
                 position: pos,
               ));
@@ -885,7 +909,7 @@ class RouteDetailState extends State<RouteDetail> {
                           }
                           stops.add(
                             Marker(
-                              alpha: 0.5,
+                              icon: BitmapDescriptor.fromBytes(markerIconBytes),
                               markerId: MarkerId("upos"),
                               position: globals.userPosition,
                             ),
