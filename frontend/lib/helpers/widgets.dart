@@ -29,12 +29,16 @@ import 'transitions.dart';
 import '../home.dart';
 
 final backgroundPaint = LoginPainter();
-  Uint8List markerIconBytes;
+Uint8List markerIconBytes;
+double sliderVal = 0.005;
 getBytesFromAsset(String path, int width) async {
-    ByteData data = await rootBundle.load(path);
-    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(), targetWidth: width);
-    ui.FrameInfo fi = await codec.getNextFrame();
-    markerIconBytes =  (await fi.image.toByteData(format: ui.ImageByteFormat.png)).buffer.asUint8List();
+  ByteData data = await rootBundle.load(path);
+  ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
+      targetWidth: width);
+  ui.FrameInfo fi = await codec.getNextFrame();
+  markerIconBytes = (await fi.image.toByteData(format: ui.ImageByteFormat.png))
+      .buffer
+      .asUint8List();
 }
 
 class AppleSignInAvailable {
@@ -384,7 +388,7 @@ Future getRSS() async {
   return response;
 }
 
-Future getCloseStops(LatLng pos) async {
+Future getCloseStops(LatLng pos, double dist) async {
   final Trace myTrace =
       FirebasePerformance.instance.newTrace("Get Nearby Stops");
   myTrace.start();
@@ -392,7 +396,7 @@ Future getCloseStops(LatLng pos) async {
   print("Gettings");
   print("uris:");
   final queryParameters = {
-    "distance": 0.005.toString(),
+    "distance": dist.toString(),
     "lon": pos.longitude.toString(),
     "lat": pos.latitude.toString(),
   };
@@ -429,29 +433,12 @@ class SettingsPage extends StatelessWidget {
               },
             ),
           ]),
-          Row(
-            children: [
-              if (globals.isLoggedIn)
-                Text(
-                    "Signed in as ${globals.user.email ?? 'an Apple ID user'}"),
-              if (!globals.isLoggedIn) Text("Signed in anonymously"),
-            ],
-          ),
-          Row(
-            children: [
-              FlatButton(
-                onPressed: () {
-                  globals.auth.signOut();
-                  Navigator.push(context, ScaleRoute(page: MyHomePage()));
-                },
-                child: Text("Log Out"),
-              )
-            ],
-          ),
           Row(children: [
             RaisedButton(
               onPressed: () {
                 showAboutDialog(
+                  applicationVersion: "v1.0",
+                  applicationLegalese: "Transit data provided by OC Transpo.",
                   context: context,
                   applicationName: "Ottawa Bus Tracker",
                 );
@@ -501,26 +488,30 @@ class _MapState extends State<Map> {
       rows: dcell,
     );
   }
+
   BitmapDescriptor pinLocationIcon;
   GoogleMapController mapController;
+  double distance = 0.005;
+  double slider_val = 0.005;
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
   }
-  
+
   @override
   void initState() {
     print('INIT STATE-------------');
     super.initState();
     setCustomMapPin();
     getBytesFromAsset('assets/location_icon.png', 50);
-  }   
+  }
+
   void setCustomMapPin() async {
     print('assets/location_icon.png');
-      pinLocationIcon = await BitmapDescriptor.fromAssetImage(
-      ImageConfiguration(devicePixelRatio: 2.5, size: Size(0.5, 0.5)),
-      'assets/location_icon.png');
-   }
+    pinLocationIcon = await BitmapDescriptor.fromAssetImage(
+        ImageConfiguration(devicePixelRatio: 2.5, size: Size(0.5, 0.5)),
+        'assets/location_icon.png');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -543,7 +534,8 @@ class _MapState extends State<Map> {
               ));
               return FutureBuilder(
                 future: getCloseStops(
-                    LatLng(snapshot.data.latitude, snapshot.data.longitude)),
+                    LatLng(snapshot.data.latitude, snapshot.data.longitude),
+                    distance),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done) {
                     print(snapshot.data);
@@ -671,15 +663,48 @@ class _MapState extends State<Map> {
                           }));
                     }
                     _closeStations.add(_markers.first);
-                    return GoogleMap(
-                      onMapCreated: _onMapCreated,
-                      myLocationButtonEnabled: false,
-                      initialCameraPosition: CameraPosition(
-                        target: pos,
-                        zoom: 15.0,
+                    return Stack(children: [
+                      GoogleMap(
+                        onMapCreated: _onMapCreated,
+                        myLocationButtonEnabled: false,
+                        initialCameraPosition: CameraPosition(
+                          target: pos,
+                          zoom: 15.0,
+                        ),
+                        markers: _closeStations,
                       ),
-                      markers: _closeStations,
-                    );
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.end,
+ 
+                        children: [
+                          Column(
+                            children: [
+                              Row(children: [
+                                Text("  Distance:",
+                                style: TextStyle(color: Colors.black, fontSize: 16),),
+                              ],),
+                              Row(
+                              children: [
+                              CustomSlider(),
+                              RaisedButton(
+                                color: Colors.red,
+                                textColor: Colors.white,
+                                child: Text("Apply"),
+                                onPressed: ()  {
+                                  setState(() {
+                                    distance = sliderVal;
+                                  });
+                                },
+                              )
+                            ],),
+                            ]
+                          ),
+                        ],
+                      )
+                      
+                    ]);
                   } else {
                     return CircularProgressIndicator();
                   }
@@ -692,6 +717,30 @@ class _MapState extends State<Map> {
           } else {
             return CircularProgressIndicator();
           }
+        });
+  }
+}
+
+class CustomSlider extends StatefulWidget {
+  @override
+  _CustomSliderState createState() => _CustomSliderState();
+}
+
+class _CustomSliderState extends State<CustomSlider> {
+  @override
+  Widget build(BuildContext ctx) {
+    return Slider(
+        divisions: 10,
+        min: 0.001,
+        max: 0.01,
+        value: sliderVal,
+        onChanged: (double val) {
+          setState(() {
+            if (val <= 0.01)
+              sliderVal = val;
+            else 
+             sliderVal = 0.01;
+          });
         });
   }
 }
