@@ -557,9 +557,22 @@ class _MapState extends State<Map> {
                                           ConnectionState.done) {
                                         var data =
                                             json.decode(snapshot.data.body);
-                                        var routes = data;
-                                        for (var route in routes)
-                                          print(route.toString());
+                                        var testRoutes = [];
+                                        testRoutes = data;
+                                        var routes = [];
+                                        
+                                        for (int i = 0; i < testRoutes.length; i++) {
+                                          bool dupFound = false;
+                                          for (int j = 0; j < testRoutes.length; j++) {
+                                            if (testRoutes[i]['arrival_time'] == testRoutes[j]['arrival_time'] && testRoutes[i]['route_id'] == testRoutes[j]['route_id'] && i != j) {
+                                              dupFound = true;
+                                              print("foubd a duplicate");
+                                            } 
+                                          }
+                                          if (!dupFound)
+                                            routes.add(testRoutes[i]);
+                                        }
+                                        // routes = test_routes;
                                         return new AlertDialog(
                                           scrollable: true,
                                           title: Text(s['stop_name']),
@@ -616,12 +629,9 @@ class _MapState extends State<Map> {
                                                           Text(
                                                             DateFormat.Hms()
                                                                 .format(DateTime.parse(
-                                                                        '2020-01-01T' +
-                                                                            route[
-                                                                                'arrival_time'])
-                                                                    .add(DateTime
-                                                                            .now()
-                                                                        .timeZoneOffset))
+                                                                    '2020-01-01T' +
+                                                                        route[
+                                                                            'arrival_time']))
                                                                 .toString(),
                                                             style: TextStyle(
                                                                 color: Colors
@@ -677,33 +687,35 @@ class _MapState extends State<Map> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisSize: MainAxisSize.max,
                         mainAxisAlignment: MainAxisAlignment.end,
- 
                         children: [
-                          Column(
-                            children: [
-                              Row(children: [
-                                Text("  Distance:",
-                                style: TextStyle(color: Colors.black, fontSize: 16),),
-                              ],),
-                              Row(
+                          Column(children: [
+                            Row(
                               children: [
-                              CustomSlider(),
-                              RaisedButton(
-                                color: Colors.red,
-                                textColor: Colors.white,
-                                child: Text("Apply"),
-                                onPressed: ()  {
-                                  setState(() {
-                                    distance = sliderVal;
-                                  });
-                                },
-                              )
-                            ],),
-                            ]
-                          ),
+                                Text(
+                                  "  Distance:",
+                                  style: TextStyle(
+                                      color: Colors.black, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                CustomSlider(),
+                                RaisedButton(
+                                  color: Colors.red,
+                                  textColor: Colors.white,
+                                  child: Text("Apply"),
+                                  onPressed: () {
+                                    setState(() {
+                                      distance = sliderVal;
+                                    });
+                                  },
+                                )
+                              ],
+                            ),
+                          ]),
                         ],
                       )
-                      
                     ]);
                   } else {
                     return CircularProgressIndicator();
@@ -738,8 +750,8 @@ class _CustomSliderState extends State<CustomSlider> {
           setState(() {
             if (val <= 0.01)
               sliderVal = val;
-            else 
-             sliderVal = 0.01;
+            else
+              sliderVal = 0.01;
           });
         });
   }
@@ -893,8 +905,7 @@ class RouteDetailState extends State<RouteDetail> {
               " - " +
               DateFormat.Hms()
                   .format(
-                      DateTime.parse('2020-01-01T' + data[i]['arrival_time'])
-                          .add(DateTime.now().timeZoneOffset))
+                      DateTime.parse('2020-01-01T' + data[i]['arrival_time']))
                   .toString(),
         ));
       },
@@ -925,7 +936,6 @@ class RouteDetailState extends State<RouteDetail> {
             builder: (BuildContext context, snapshot) {
               print("Herer");
               if (snapshot.connectionState == ConnectionState.done) {
-                print(snapshot.data.body);
                 var data = json.decode(snapshot.data.body);
                 return Stack(
                   children: [
@@ -976,6 +986,8 @@ class RouteDetailState extends State<RouteDetail> {
                           polylines.add(polyline);
 
                           return GoogleMap(
+                            padding: EdgeInsets.fromLTRB(0, 0, 0,
+                                120), // move google logo up from pull down
                             markers: stops,
                             polylines: polylines,
                             myLocationButtonEnabled: false,
@@ -1076,8 +1088,6 @@ class SearchViewState extends State<SearchView> {
                                       ConnectionState.done) {
                                     var data = json.decode(snapshot.data.body);
                                     var routes = data;
-                                    for (var route in routes)
-                                      print(route.toString());
                                     return new AlertDialog(
                                       scrollable: true,
                                       title: Text(s['stop_name']),
@@ -1133,12 +1143,9 @@ class SearchViewState extends State<SearchView> {
                                                       Text(
                                                         DateFormat.Hms()
                                                             .format(DateTime.parse(
-                                                                    '2020-01-01T' +
-                                                                        route[
-                                                                            'arrival_time'])
-                                                                .add(DateTime
-                                                                        .now()
-                                                                    .timeZoneOffset))
+                                                                '2020-01-01T' +
+                                                                    route[
+                                                                        'arrival_time']))
                                                             .toString(),
                                                         style: TextStyle(
                                                             color: Colors.grey),
