@@ -744,14 +744,14 @@ class _CustomSliderState extends State<CustomSlider> {
     return Slider(
         divisions: 10,
         min: 0.001,
-        max: 0.01,
+        max: 0.02,
         value: sliderVal,
         onChanged: (double val) {
           setState(() {
-            if (val <= 0.01)
+            if (val <= 0.2)
               sliderVal = val;
             else
-              sliderVal = 0.01;
+              sliderVal = 0.2;
           });
         });
   }
@@ -1078,111 +1078,130 @@ class SearchViewState extends State<SearchView> {
                       icon: Icon(Icons.more_vert),
                       onPressed: () {
                         var s = res;
-                        showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return FutureBuilder(
-                                future: getNextTrips(s['stop_id'].toString()),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.done) {
-                                    var data = json.decode(snapshot.data.body);
-                                    var routes = data;
-                                    return new AlertDialog(
-                                      scrollable: true,
-                                      title: Text(s['stop_name']),
-                                      content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Row(
+                            showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return FutureBuilder(
+                                    future:
+                                        getNextTrips(s['stop_id'].toString()),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.done) {
+                                        var data =
+                                            json.decode(snapshot.data.body);
+                                        var testRoutes = [];
+                                        testRoutes = data;
+                                        var routes = [];
+                                        
+                                        for (int i = 0; i < testRoutes.length; i++) {
+                                          bool dupFound = false;
+                                          for (int j = 0; j < testRoutes.length; j++) {
+                                            if (testRoutes[i]['arrival_time'] == testRoutes[j]['arrival_time'] && testRoutes[i]['route_id'] == testRoutes[j]['route_id'] && i != j) {
+                                              dupFound = true;
+                                              print("foubd a duplicate");
+                                            } 
+                                          }
+                                          if (!dupFound)
+                                            routes.add(testRoutes[i]);
+                                        }
+                                        // routes = test_routes;
+                                        return new AlertDialog(
+                                          scrollable: true,
+                                          title: Text(s['stop_name']),
+                                          content: Column(
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Text("Stop Number: "),
-                                                Text(s['stop_code'].toString()),
-                                              ],
-                                            ),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  "Next Buses:",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .headline6,
-                                                )
-                                              ],
-                                            ),
-                                            for (var route in routes)
-                                              Column(
-                                                children: [
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
+                                                Row(
+                                                  children: [
+                                                    Text("Stop Number: "),
+                                                    Text(s['stop_code']
+                                                        .toString()),
+                                                  ],
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      "Next Buses:",
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .headline6,
+                                                    )
+                                                  ],
+                                                ),
+                                                for (var route in routes)
+                                                  Column(
                                                     children: [
-                                                      Text(
-                                                        route['route_short_name']
-                                                                .toString() +
-                                                            "-" +
-                                                            route['trip_headsign']
-                                                                .toString()
-                                                                .substring(
-                                                                    0,
-                                                                    route['trip_headsign'].length >
-                                                                            10
-                                                                        ? 10
-                                                                        : null),
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          Text(
+                                                            route['route_short_name']
+                                                                    .toString() +
+                                                                "-" +
+                                                                route['trip_headsign']
+                                                                    .toString()
+                                                                    .substring(
+                                                                        0,
+                                                                        route['trip_headsign'].length >
+                                                                                10
+                                                                            ? 10
+                                                                            : null),
+                                                          ),
+                                                          RoutesMenu(
+                                                              route['route_short_name']
+                                                                  .toString(),
+                                                              s['stop_lat'],
+                                                              s['stop_lon']),
+                                                        ],
                                                       ),
-                                                      RoutesMenu(
-                                                          route['route_short_name']
-                                                              .toString(),
-                                                          s['stop_lat'],
-                                                          s['stop_lon']),
+                                                      Row(
+                                                        children: [
+                                                          Text(
+                                                            DateFormat.Hms()
+                                                                .format(DateTime.parse(
+                                                                    '2020-01-01T' +
+                                                                        route[
+                                                                            'arrival_time']))
+                                                                .toString(),
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .grey),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ],
                                                   ),
-                                                  Row(
-                                                    children: [
-                                                      Text(
-                                                        DateFormat.Hms()
-                                                            .format(DateTime.parse(
-                                                                '2020-01-01T' +
-                                                                    route[
-                                                                        'arrival_time']))
-                                                            .toString(),
-                                                        style: TextStyle(
-                                                            color: Colors.grey),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            if (data == []) Text("No data")
-                                          ]),
-                                      actions: [
-                                        OutlineButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context),
-                                          child: Text("Exit"),
-                                        ),
-                                      ],
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10.0),
-                                      ),
-                                    );
-                                  } else {
-                                    return AlertDialog(
-                                      title: Text("Loading"),
-                                      content: LinearProgressIndicator(
-                                        value: null,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10.0),
-                                      ),
-                                    );
-                                  }
-                                },
-                              );
-                            });
+                                                if (data == []) Text("No data")
+                                              ]),
+                                          actions: [
+                                            OutlineButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
+                                              child: Text("Exit"),
+                                            ),
+                                          ],
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10.0),
+                                          ),
+                                        );
+                                      } else {
+                                        return AlertDialog(
+                                          title: Text("Loading"),
+                                          content: LinearProgressIndicator(
+                                            value: null,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10.0),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  );
+                                });
                       }),
                 ),
             ],
