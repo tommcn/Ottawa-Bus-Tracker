@@ -539,137 +539,28 @@ class _MapState extends State<Map> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done) {
                     print(snapshot.data);
-                    var data = json.decode(snapshot.data.body);
+                    String errorText;
+                    
+                    var data;
+                    try {
+                      data = json.decode(snapshot.data.body);
+                    } catch (e) {
+                      if (snapshot.data.body == "The database is not ready! Check again in 3 minutes")
+                      {
+                        errorText = "We are preparing the database for you, please come back in 3 minutes";
+                      } else  {
+                        errorText = "An error has occured, pleasy try again";
+                      }
+                      return Text(errorText);
+                    }
+                    
                     Set<Marker> _closeStations = {};
                     for (var s in data) {
                       _closeStations.add(Marker(
                           markerId: MarkerId(s['stop_id']),
                           position: LatLng(s['stop_lat'], s['stop_lon']),
                           onTap: () {
-                            showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return FutureBuilder(
-                                    future:
-                                        getNextTrips(s['stop_id'].toString()),
-                                    builder: (context, snapshot) {
-                                      if (snapshot.connectionState ==
-                                          ConnectionState.done) {
-                                        var data =
-                                            json.decode(snapshot.data.body);
-                                        var testRoutes = [];
-                                        testRoutes = data;
-                                        var routes = [];
-                                        
-                                        for (int i = 0; i < testRoutes.length; i++) {
-                                          bool dupFound = false;
-                                          for (int j = 0; j < testRoutes.length; j++) {
-                                            if (testRoutes[i]['arrival_time'] == testRoutes[j]['arrival_time'] && testRoutes[i]['route_id'] == testRoutes[j]['route_id'] && i != j) {
-                                              dupFound = true;
-                                              print("foubd a duplicate");
-                                            } 
-                                          }
-                                          if (!dupFound)
-                                            routes.add(testRoutes[i]);
-                                        }
-                                        // routes = test_routes;
-                                        return new AlertDialog(
-                                          scrollable: true,
-                                          title: Text(s['stop_name']),
-                                          content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Text("Stop Number: "),
-                                                    Text(s['stop_code']
-                                                        .toString()),
-                                                  ],
-                                                ),
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      "Next Buses:",
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .headline6,
-                                                    )
-                                                  ],
-                                                ),
-                                                for (var route in routes)
-                                                  Column(
-                                                    children: [
-                                                      Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceBetween,
-                                                        children: [
-                                                          Text(
-                                                            route['route_short_name']
-                                                                    .toString() +
-                                                                "-" +
-                                                                route['trip_headsign']
-                                                                    .toString()
-                                                                    .substring(
-                                                                        0,
-                                                                        route['trip_headsign'].length >
-                                                                                10
-                                                                            ? 10
-                                                                            : null),
-                                                          ),
-                                                          RoutesMenu(
-                                                              route['route_short_name']
-                                                                  .toString(),
-                                                              s['stop_lat'],
-                                                              s['stop_lon']),
-                                                        ],
-                                                      ),
-                                                      Row(
-                                                        children: [
-                                                          Text(
-                                                            DateFormat.Hms()
-                                                                .format(DateTime.parse(
-                                                                    '2020-01-01T' +
-                                                                        route[
-                                                                            'arrival_time']))
-                                                                .toString(),
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .grey),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                if (data == []) Text("No data")
-                                              ]),
-                                          actions: [
-                                            OutlineButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              child: Text("Exit"),
-                                            ),
-                                          ],
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10.0),
-                                          ),
-                                        );
-                                      } else {
-                                        return AlertDialog(
-                                          title: Text("Loading"),
-                                          content: LinearProgressIndicator(
-                                            value: null,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10.0),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  );
-                                });
+                            showDialogStop(context, s);
                           }));
                     }
                     _closeStations.add(_markers.first);
@@ -1030,7 +921,7 @@ class SearchView extends StatefulWidget {
 class SearchViewState extends State<SearchView> {
   final myController = TextEditingController();
   ScrollController _listcontroller = new ScrollController();
-  var results = [];
+  var results;
 
   @override
   void dispose() {
@@ -1052,11 +943,24 @@ class SearchViewState extends State<SearchView> {
         ),
         OutlineButton(
           onPressed: () {
+            if (myController.text.toString() != "")
             getSearch(myController.text.toString()).then((res) {
               print('In Builder');
-              print("${res.body}");
+              var asJson;
+              try {
+                asJson = json.decode(res.body);
+              } catch(e) {
+                print(e);
+                if (res == "The database is not ready! Check again in 3 minutes")
+                {
+                  asJson = "We are preparing the database for you, please come back in 3 minutes";
+                } else  {
+                  asJson = "An error has occured, please try again";
+                }
+                // asJson = "error";
+              }              
               setState(() {
-                results = json.decode(res.body);
+                results = asJson;
               });
             });
           },
@@ -1069,8 +973,9 @@ class SearchViewState extends State<SearchView> {
             controller: _listcontroller,
             shrinkWrap: true,
             children: [
+              if (results is List)
               for (var res in results)
-                ListTile(
+              ListTile(
                   leading: Icon(Icons.directions_bus),
                   title: Text(res['stop_name']),
                   subtitle: Text("Code: ${res['stop_code']}"),
@@ -1078,132 +983,15 @@ class SearchViewState extends State<SearchView> {
                       icon: Icon(Icons.more_vert),
                       onPressed: () {
                         var s = res;
-                            showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return FutureBuilder(
-                                    future:
-                                        getNextTrips(s['stop_id'].toString()),
-                                    builder: (context, snapshot) {
-                                      if (snapshot.connectionState ==
-                                          ConnectionState.done) {
-                                        var data =
-                                            json.decode(snapshot.data.body);
-                                        var testRoutes = [];
-                                        testRoutes = data;
-                                        var routes = [];
-                                        
-                                        for (int i = 0; i < testRoutes.length; i++) {
-                                          bool dupFound = false;
-                                          for (int j = 0; j < testRoutes.length; j++) {
-                                            if (testRoutes[i]['arrival_time'] == testRoutes[j]['arrival_time'] && testRoutes[i]['route_id'] == testRoutes[j]['route_id'] && i != j) {
-                                              dupFound = true;
-                                              print("foubd a duplicate");
-                                            } 
-                                          }
-                                          if (!dupFound)
-                                            routes.add(testRoutes[i]);
-                                        }
-                                        // routes = test_routes;
-                                        return new AlertDialog(
-                                          scrollable: true,
-                                          title: Text(s['stop_name']),
-                                          content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Text("Stop Number: "),
-                                                    Text(s['stop_code']
-                                                        .toString()),
-                                                  ],
-                                                ),
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      "Next Buses:",
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .headline6,
-                                                    )
-                                                  ],
-                                                ),
-                                                for (var route in routes)
-                                                  Column(
-                                                    children: [
-                                                      Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceBetween,
-                                                        children: [
-                                                          Text(
-                                                            route['route_short_name']
-                                                                    .toString() +
-                                                                "-" +
-                                                                route['trip_headsign']
-                                                                    .toString()
-                                                                    .substring(
-                                                                        0,
-                                                                        route['trip_headsign'].length >
-                                                                                10
-                                                                            ? 10
-                                                                            : null),
-                                                          ),
-                                                          RoutesMenu(
-                                                              route['route_short_name']
-                                                                  .toString(),
-                                                              s['stop_lat'],
-                                                              s['stop_lon']),
-                                                        ],
-                                                      ),
-                                                      Row(
-                                                        children: [
-                                                          Text(
-                                                            DateFormat.Hms()
-                                                                .format(DateTime.parse(
-                                                                    '2020-01-01T' +
-                                                                        route[
-                                                                            'arrival_time']))
-                                                                .toString(),
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .grey),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                if (data == []) Text("No data")
-                                              ]),
-                                          actions: [
-                                            OutlineButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              child: Text("Exit"),
-                                            ),
-                                          ],
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10.0),
-                                          ),
-                                        );
-                                      } else {
-                                        return AlertDialog(
-                                          title: Text("Loading"),
-                                          content: LinearProgressIndicator(
-                                            value: null,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10.0),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  );
-                                });
+                        showDialogStop(context, s);
                       }),
                 ),
+              if (results is String)
+                ListTile(
+                    leading: Icon(Icons.directions_bus),
+                    title: Text("Error"),
+                    subtitle: Text(results),
+                  ),
             ],
           ),
         )
@@ -1270,4 +1058,128 @@ _launchURL(url) async {
 
 String format(DateTime value) {
   return "${value.hour}:${value.minute}:${value.second}";
+}
+
+void showDialogStop(context, s) {
+  showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return FutureBuilder(
+          future: getNextTrips(s['stop_id'].toString()),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+            var data;
+              try {
+                data = json.decode(snapshot.data.body);
+              } catch (e)  {
+                String errorText;
+                if (snapshot.data.body == "The database is not ready! Check again in 3 minutes")
+                {
+                  errorText = "We are preparing the database for you, please come back in 3 minutes";
+                } else  {
+                  errorText = "An error has occured, please try again";
+                }
+                return AlertDialog(
+                  title: Text("Error"),
+                  content: Text(errorText),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                );
+              }
+              
+              var testRoutes = [];
+              testRoutes = data;
+              var routes = [];
+
+              for (int i = 0; i < testRoutes.length; i++) {
+                bool dupFound = false;
+                for (int j = 0; j < testRoutes.length; j++) {
+                  if (testRoutes[i]['arrival_time'] ==
+                          testRoutes[j]['arrival_time'] &&
+                      testRoutes[i]['route_id'] == testRoutes[j]['route_id'] &&
+                      i != j) {
+                    dupFound = true;
+                    print("foubd a duplicate");
+                  }
+                }
+                if (!dupFound) routes.add(testRoutes[i]);
+              }
+              // routes = test_routes;
+              return new AlertDialog(
+                scrollable: true,
+                title: Text(s['stop_name']),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Row(
+                    children: [
+                      Text("Stop Number: "),
+                      Text(s['stop_code'].toString()),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        "Next Buses:",
+                        style: Theme.of(context).textTheme.headline6,
+                      )
+                    ],
+                  ),
+                  for (var route in routes)
+                    Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              route['route_short_name'].toString() +
+                                  "-" +
+                                  route['trip_headsign'].toString().substring(
+                                      0,
+                                      route['trip_headsign'].length > 10
+                                          ? 10
+                                          : null),
+                            ),
+                            RoutesMenu(route['route_short_name'].toString(),
+                                s['stop_lat'], s['stop_lon']),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Text(
+                              DateFormat.Hms()
+                                  .format(DateTime.parse(
+                                      '2020-01-01T' + route['arrival_time']))
+                                  .toString(),
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  if (data == []) Text("No data")
+                ]),
+                actions: [
+                  OutlineButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text("Exit"),
+                  ),
+                ],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+              );
+            } else {
+              return AlertDialog(
+                title: Text("Loading"),
+                content: LinearProgressIndicator(
+                  value: null,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+              );
+            }
+          },
+        );
+      });
 }
